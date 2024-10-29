@@ -17,7 +17,7 @@ from .megatron import get_megatron_gpt_dataloaders
 from .sampler import BlendedDistributedSampler
 from .sst2 import SST2Dataset
 from .utils import collate_fn, custom_iterator, get_next_batch
-
+from .jsonlines import JSONLinesDataset
 
 _DATASETS_LIST = {
     "AlpacaDataset": AlpacaDataset,
@@ -26,6 +26,7 @@ _DATASETS_LIST = {
     "HuggingFaceDataset": HuggingFaceDataset,
     "SlimOrcaDataset": SlimOrcaDataset,
     "SST2Dataset": SST2Dataset,
+    "JSONLinesDataset": JSONLinesDataset,
 }
 
 
@@ -79,7 +80,8 @@ def get_datasets_list(
             data_sampling_ratios.append(data_args.data_sampling_ratio)
 
             log_rank_0(
-                logging.INFO, f"examples in {dataset.__class__.__name__} ({data_args.data_name}) = {len(dataset)}"
+                logging.INFO,
+                f"examples in {dataset.__class__.__name__} ({data_args.data_name}) = {len(dataset)}",
             )
 
     assert all([i is not None for i in data_sampling_ratios]) or all(
@@ -122,11 +124,19 @@ def get_dataloader(
         ), "tensor parallel doesn't support dispatching dataloader"
 
         dataloader = _get_dispatching_dataloader(
-            args, split=split, mode=mode, tokenizer=tokenizer, is_encoder_decoder=is_encoder_decoder
+            args,
+            split=split,
+            mode=mode,
+            tokenizer=tokenizer,
+            is_encoder_decoder=is_encoder_decoder,
         )
     else:
         dataloader = _get_non_dispatching_dataloader(
-            args, split=split, mode=mode, tokenizer=tokenizer, is_encoder_decoder=is_encoder_decoder
+            args,
+            split=split,
+            mode=mode,
+            tokenizer=tokenizer,
+            is_encoder_decoder=is_encoder_decoder,
         )
 
     return dataloader
@@ -299,7 +309,12 @@ def _log_dataset(
     dp_world_size = ProcessGroupManager.get_data_parallel_world_size()
 
     if split == DatasetSplit.train:
-        total_samples_seen = num_training_steps * gradient_accumulation_steps * micro_batch_size * dp_world_size
+        total_samples_seen = (
+            num_training_steps
+            * gradient_accumulation_steps
+            * micro_batch_size
+            * dp_world_size
+        )
     else:
         num_steps = len(blended_dataset) // (micro_batch_size * dp_world_size)
         if len(blended_dataset) % (micro_batch_size * dp_world_size) != 0:
@@ -309,6 +324,9 @@ def _log_dataset(
 
     log_rank_0(logging.INFO, "*" * 57)
     log_rank_0(logging.INFO, f"total samples seen = {total_samples_seen}")
-    log_rank_0(logging.INFO, f"total epochs for the dataset mixture = {total_samples_seen / len(blended_dataset)}")
+    log_rank_0(
+        logging.INFO,
+        f"total epochs for the dataset mixture = {total_samples_seen / len(blended_dataset)}",
+    )
     log_rank_0(logging.INFO, sampler)
     log_rank_0(logging.INFO, "-" * 57)
