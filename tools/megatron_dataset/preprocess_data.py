@@ -10,11 +10,20 @@ from datasets import load_dataset
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-from dolomite_engine.data.megatron.indexed_dataset import DType, MMapIndexedDatasetBuilder
+import sys
+
+sys.path.append("/dccstor/cssblr/rmurthyv/IBM/dolomite_new/dolomite-engine/")
+
+from dolomite_engine.data.megatron.indexed_dataset import (
+    DType,
+    MMapIndexedDatasetBuilder,
+)
 
 
 class Encoder:
-    def __init__(self, tokenizer: AutoTokenizer, json_keys: List[str], append_eod: bool) -> None:
+    def __init__(
+        self, tokenizer: AutoTokenizer, json_keys: List[str], append_eod: bool
+    ) -> None:
         self.tokenizer = tokenizer
         self.json_keys = json_keys
         self.append_eod = append_eod
@@ -46,24 +55,53 @@ def get_args() -> Namespace:
     parser = ArgumentParser()
 
     group = parser.add_argument_group(title="input data")
-    group.add_argument("--input", type=str, required=True, help="Path to input JSON/Arrow")
     group.add_argument(
-        "--subset", type=str, default=None, help="Subset argument when loading input data from a HuggingFace dataset"
+        "--input", type=str, required=True, help="Path to input JSON/Arrow"
     )
     group.add_argument(
-        "--json-keys", nargs="+", default=["text"], help="space separate listed of keys to extract from json"
+        "--subset",
+        type=str,
+        default=None,
+        help="Subset argument when loading input data from a HuggingFace dataset",
+    )
+    group.add_argument(
+        "--json-keys",
+        nargs="+",
+        default=["text"],
+        help="space separate listed of keys to extract from json",
     )
 
     group = parser.add_argument_group(title="tokenizer")
-    group.add_argument("--tokenizer", type=str, required=True, help="Path to the tokenizer")
-    group.add_argument("--append-eod", action="store_true", help="Append an <eod> token to the end of a document.")
+    group.add_argument(
+        "--tokenizer", type=str, required=True, help="Path to the tokenizer"
+    )
+    group.add_argument(
+        "--append-eod",
+        action="store_true",
+        help="Append an <eod> token to the end of a document.",
+    )
 
     group = parser.add_argument_group(title="output data")
-    group.add_argument("--output-prefix", type=str, required=True, help="Path to binary output file without suffix")
+    group.add_argument(
+        "--output-prefix",
+        type=str,
+        required=True,
+        help="Path to binary output file without suffix",
+    )
 
     group = parser.add_argument_group(title="runtime")
-    group.add_argument("--workers", type=int, required=True, help="Number of worker processes to launch")
-    group.add_argument("--chunk-size", type=int, required=True, help="Chunk size assigned to each worker process")
+    group.add_argument(
+        "--workers",
+        type=int,
+        required=True,
+        help="Number of worker processes to launch",
+    )
+    group.add_argument(
+        "--chunk-size",
+        type=int,
+        required=True,
+        help="Chunk size assigned to each worker process",
+    )
     args = parser.parse_args()
 
     return args
@@ -81,14 +119,18 @@ def main() -> None:
     if args.input.endswith(".jsonl"):
         print("Input is a jsonl file")
 
-        assert args.subset is None, f"subset argument set to: {args.subset}, but loading a jsonl file."
+        assert (
+            args.subset is None
+        ), f"subset argument set to: {args.subset}, but loading a jsonl file."
 
         fin = open(args.input, "r", encoding="utf-8")
         encoded_docs = pool.imap(encoder.encode, fin, args.chunk_size)
     elif args.input.endswith(".jsonl.zst"):
         print("Input is a jsonl zst file")
 
-        assert args.subset is None, f"subset argument set to: {args.subset}, but loading a zst jsonl file."
+        assert (
+            args.subset is None
+        ), f"subset argument set to: {args.subset}, but loading a zst jsonl file."
 
         import tempfile
 
@@ -104,12 +146,19 @@ def main() -> None:
     else:
         print("Input is not a jsonl file, will try to load from HF datasets")
 
-        ds = load_dataset(args.input, use_auth_token=True, streaming=True, split="train", data_dir=args.subset)
+        ds = load_dataset(
+            args.input,
+            use_auth_token=True,
+            streaming=True,
+            split="train",
+            data_dir=args.subset,
+        )
         encoded_docs = pool.imap(encoder.encode_hf, ds, args.chunk_size)
 
     builders = {
         key: MMapIndexedDatasetBuilder(
-            f"{args.output_prefix}_{key}.bin", dtype=DType.optimal_dtype(tokenizer.vocab_size)
+            f"{args.output_prefix}_{key}.bin",
+            dtype=DType.optimal_dtype(tokenizer.vocab_size),
         )
         for key in args.json_keys
     }

@@ -127,7 +127,10 @@ class _IndexWriter:
         return self
 
     def __exit__(
-        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: TracebackType | None
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
     ) -> bool | None:
         """Exit the context introduced by the 'with' keyword
 
@@ -143,7 +146,12 @@ class _IndexWriter:
         """
         self.idx_writer.close()
 
-    def write(self, sequence_lengths: list[int], sequence_modes: list[int], document_indices: list[int]) -> None:
+    def write(
+        self,
+        sequence_lengths: list[int],
+        sequence_modes: list[int],
+        document_indices: list[int],
+    ) -> None:
         """Write the index (.idx) file
 
         Args:
@@ -278,7 +286,9 @@ class _IndexReader:
             self.bin_buffer,
             dtype=numpy.int64,
             count=self.document_count,
-            offset=offset + self.sequence_lengths.nbytes + self.sequence_pointers.nbytes,
+            offset=offset
+            + self.sequence_lengths.nbytes
+            + self.sequence_pointers.nbytes,
         )
         t_end = time.time()
         log_rank_0(logging.DEBUG, f"\t> time elapsed: {t_end - t_beg:4f} seconds")
@@ -304,7 +314,10 @@ class _IndexReader:
         assert self.sequence_lengths.shape[0] == self.document_indices[-1]
 
         log_rank_0(logging.INFO, f"> total number of sequences: {len(self)}")
-        log_rank_0(logging.INFO, f"> total number of documents: {self.document_indices.shape[0] - 1}")
+        log_rank_0(
+            logging.INFO,
+            f"> total number of documents: {self.document_indices.shape[0] - 1}",
+        )
 
     def __del__(self) -> None:
         """Clean up the object"""
@@ -320,7 +333,9 @@ class _IndexReader:
         return self.sequence_count
 
     @lru_cache(maxsize=8)
-    def __getitem__(self, idx: int) -> tuple[numpy.int32, numpy.int64, numpy.int8 | None]:
+    def __getitem__(
+        self, idx: int
+    ) -> tuple[numpy.int32, numpy.int64, numpy.int8 | None]:
         """Return the pointer, length, and mode at the index
 
         Args:
@@ -371,7 +386,9 @@ class MMapIndexedDataset(torch.utils.data.Dataset):
         self.path_prefix = path_prefix
         self.multimodal = multimodal
         self.index = _IndexReader(get_idx_path(self.path_prefix), self.multimodal)
-        self.bin_buffer_mmap = numpy.memmap(get_bin_path(self.path_prefix), mode="r", order="C")
+        self.bin_buffer_mmap = numpy.memmap(
+            get_bin_path(self.path_prefix), mode="r", order="C"
+        )
         self.bin_buffer = memoryview(self.bin_buffer_mmap)
 
     def __getstate__(self) -> tuple[str, bool]:
@@ -406,7 +423,9 @@ class MMapIndexedDataset(torch.utils.data.Dataset):
         """
         return len(self.index)
 
-    def __getitem__(self, idx: int | numpy.integer | slice) -> numpy.ndarray | tuple[numpy.ndarray, numpy.ndarray]:
+    def __getitem__(
+        self, idx: int | numpy.integer | slice
+    ) -> numpy.ndarray | tuple[numpy.ndarray, numpy.ndarray]:
         """Return from the dataset
 
         Args:
@@ -445,11 +464,15 @@ class MMapIndexedDataset(torch.utils.data.Dataset):
                 ),
                 sequence_offsets[:-1],
             )
-            return (sequences, sequence_modes) if sequence_modes is not None else sequences
+            return (
+                (sequences, sequence_modes) if sequence_modes is not None else sequences
+            )
         else:
             raise TypeError("Unexpected type received for idx: {}".format(type(idx)))
 
-    def get(self, idx: int, offset: int = 0, length: int | None = None) -> numpy.ndarray:
+    def get(
+        self, idx: int, offset: int = 0, length: int | None = None
+    ) -> numpy.ndarray:
         """Retrieve a single item from the dataset with the option to only
         return a portion of the item.
 
@@ -462,7 +485,12 @@ class MMapIndexedDataset(torch.utils.data.Dataset):
         if length is None:
             length = sequence_length - offset
         sequence_pointer += offset * DType.size(self.index.dtype)
-        sequence = numpy.frombuffer(self.bin_buffer, dtype=self.index.dtype, count=length, offset=sequence_pointer)
+        sequence = numpy.frombuffer(
+            self.bin_buffer,
+            dtype=self.index.dtype,
+            count=length,
+            offset=sequence_pointer,
+        )
         return (sequence, sequence_mode) if sequence_mode is not None else sequence
 
     @property
@@ -522,7 +550,9 @@ class MMapIndexedDataset(torch.utils.data.Dataset):
         Returns:
             bool: Whether the MMapIndexedDataset exists on disk at the prefix
         """
-        return os.path.exists(get_idx_path(path_prefix)) and os.path.exists(get_bin_path(path_prefix))
+        return os.path.exists(get_idx_path(path_prefix)) and os.path.exists(
+            get_bin_path(path_prefix)
+        )
 
 
 class MMapIndexedDatasetBuilder:
@@ -536,7 +566,9 @@ class MMapIndexedDatasetBuilder:
         multimodal (bool, optional): Whether the dataset is multimodal. Defaults to False.
     """
 
-    def __init__(self, bin_path: str, dtype: numpy.dtype = numpy.int32, multimodal: bool = False) -> None:
+    def __init__(
+        self, bin_path: str, dtype: numpy.dtype = numpy.int32, multimodal: bool = False
+    ) -> None:
         self.data_file = open(bin_path, "wb")
         self.dtype = dtype
         self.multimodal = multimodal
@@ -559,7 +591,9 @@ class MMapIndexedDatasetBuilder:
         if self.multimodal:
             self.sequence_modes.append(mode)
 
-    def add_document(self, tensor: torch.Tensor, lengths: list[int], modes: list[int] | None = None) -> None:
+    def add_document(
+        self, tensor: torch.Tensor, lengths: list[int], modes: list[int] | None = None
+    ) -> None:
         """Add an entire document to the dataset
 
         Args:
@@ -608,7 +642,12 @@ class MMapIndexedDatasetBuilder:
         """
         self.data_file.close()
         with _IndexWriter(idx_path, self.dtype) as writer:
-            writer.write(self.sequence_lengths, self.sequence_modes, self.document_indices)
+            print(self.sequence_lengths)
+            print(self.document_indices)
+            print("\n")
+            writer.write(
+                self.sequence_lengths, self.sequence_modes, self.document_indices
+            )
 
 
 def get_idx_path(path_prefix: str) -> str:

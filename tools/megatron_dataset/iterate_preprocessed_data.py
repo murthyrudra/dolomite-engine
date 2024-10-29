@@ -3,6 +3,9 @@ from argparse import ArgumentParser, Namespace
 
 from tqdm import tqdm
 
+import sys
+
+sys.path.append("/dccstor/cssblr/rmurthyv/IBM/dolomite_new/dolomite-engine/")
 from dolomite_engine.data.megatron.indexed_dataset import MMapIndexedDataset
 from dolomite_engine.utils import log_rank_0, set_logger
 
@@ -14,7 +17,12 @@ def get_args() -> Namespace:
     parser = ArgumentParser()
 
     group = parser.add_argument_group(title="input data")
-    group.add_argument("--path-prefix", type=str, required=True, help="Path to binary file without suffix")
+    group.add_argument(
+        "--path-prefix",
+        type=str,
+        required=True,
+        help="Path to binary file without suffix",
+    )
 
     args = parser.parse_args()
 

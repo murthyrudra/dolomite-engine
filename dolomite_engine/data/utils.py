@@ -4,7 +4,7 @@ from typing import Iterable
 import torch
 
 from ..enums import LossMask, Mode
-from ..hf_models import convert_padding_free_lists_to_tensors
+from ..hf_models.utils import convert_padding_free_lists_to_tensors
 
 
 def collate_fn(
@@ -37,7 +37,9 @@ def collate_fn(
 
     if use_padding_free_transformer:
         if is_encoder_decoder:
-            raise NotImplementedError("padding free transformer only supports decoder only models")
+            raise NotImplementedError(
+                "padding free transformer only supports decoder only models"
+            )
         else:
             input_ids = inputs
             attention_mask = None
@@ -55,15 +57,19 @@ def collate_fn(
             tokens_to_add = 0
             if pad_to_multiple_of > 1:
                 total_tokens = sum([len(array) for array in input_ids])
-                tokens_to_add = (math.ceil(total_tokens / pad_to_multiple_of) * pad_to_multiple_of) - total_tokens
+                tokens_to_add = (
+                    math.ceil(total_tokens / pad_to_multiple_of) * pad_to_multiple_of
+                ) - total_tokens
 
             # we pad the last example in the batch on the right
             # NOTE this can be done since the attention is causal
             input_ids[-1].extend([eos_token_id] * tokens_to_add)
             labels[-1].extend([labels_mask_value] * tokens_to_add)
 
-            input_ids, position_ids, _, labels, cu_seqlens, max_seqlen = convert_padding_free_lists_to_tensors(
-                input_ids=input_ids, labels=labels, device=device
+            input_ids, position_ids, _, labels, cu_seqlens, max_seqlen = (
+                convert_padding_free_lists_to_tensors(
+                    input_ids=input_ids, labels=labels, device=device
+                )
             )
 
         result = {
@@ -77,12 +83,20 @@ def collate_fn(
     else:
         if is_encoder_decoder:
             if pad_to_multiple_of > 1:
-                raise NotImplementedError("pad_to_multiple_of is not implemented for encoder-decoder models")
+                raise NotImplementedError(
+                    "pad_to_multiple_of is not implemented for encoder-decoder models"
+                )
 
             input_max_length = max(list(map(len, inputs)))
 
-            input_ids = [[eos_token_id] * (input_max_length - len(array)) + array for array in inputs]
-            attention_mask = [[0] * (input_max_length - len(array)) + [1] * len(array) for array in inputs]
+            input_ids = [
+                [eos_token_id] * (input_max_length - len(array)) + array
+                for array in inputs
+            ]
+            attention_mask = [
+                [0] * (input_max_length - len(array)) + [1] * len(array)
+                for array in inputs
+            ]
 
             if outputs is not None:
                 assert (
@@ -91,18 +105,30 @@ def collate_fn(
 
                 output_max_length = max(list(map(len, outputs)))
                 # right padding for labels
-                labels = [array + [labels_mask_value] * (output_max_length - len(array)) for array in outputs]
+                labels = [
+                    array + [labels_mask_value] * (output_max_length - len(array))
+                    for array in outputs
+                ]
         else:
             max_length = max(list(map(len, inputs)))
             if pad_to_multiple_of > 1:
-                max_length = math.ceil(max_length / pad_to_multiple_of) * pad_to_multiple_of
+                max_length = (
+                    math.ceil(max_length / pad_to_multiple_of) * pad_to_multiple_of
+                )
 
-            input_ids = [[eos_token_id] * (max_length - len(array)) + array for array in inputs]
-            attention_mask = [[0] * (max_length - len(array)) + [1] * len(array) for array in inputs]
+            input_ids = [
+                [eos_token_id] * (max_length - len(array)) + array for array in inputs
+            ]
+            attention_mask = [
+                [0] * (max_length - len(array)) + [1] * len(array) for array in inputs
+            ]
 
             if outputs is not None:
                 if loss_mask == LossMask.output_only:
-                    labels = [[labels_mask_value] * (max_length - len(array)) + array for array in outputs]
+                    labels = [
+                        [labels_mask_value] * (max_length - len(array)) + array
+                        for array in outputs
+                    ]
                 elif loss_mask == LossMask.no_mask:
                     labels = inputs
                 else:
