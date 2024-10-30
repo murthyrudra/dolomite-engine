@@ -87,3 +87,12 @@ class ExperimentsTrackerName(str, Enum):
 
     aim = "aim"
     wandb = "wandb"
+
+
+class DatasetKeys(str, Enum):
+    """standard keys in the dataset"""
+
+    input = "input"
+    output = "output"
+    generated_text = "generated_text"
+    num_generated_tokens = "num_generated_tokens"

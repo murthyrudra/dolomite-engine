@@ -642,9 +642,6 @@ class MMapIndexedDatasetBuilder:
         """
         self.data_file.close()
         with _IndexWriter(idx_path, self.dtype) as writer:
-            print(self.sequence_lengths)
-            print(self.document_indices)
-            print("\n")
             writer.write(
                 self.sequence_lengths, self.sequence_modes, self.document_indices
             )

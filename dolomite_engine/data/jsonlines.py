@@ -8,7 +8,7 @@ from transformers import AutoTokenizer
 
 from datasets import load_dataset, Dataset
 
-from ..enums import DatasetKeys, DatasetSplit, Mode, TuningMethod
+from ..enums import DatasetKeys, DatasetSplit, Mode
 from .base import BaseDataset
 from ..utils import log_rank_0
 
@@ -23,7 +23,6 @@ class JSONLinesDataset(BaseDataset):
         mode: Mode,
         tokenizer: AutoTokenizer,
         is_encoder_decoder: bool,
-        tuning_method: TuningMethod,
         data_name: str,
         input_format: str,
         output_format: str,
@@ -37,7 +36,6 @@ class JSONLinesDataset(BaseDataset):
             mode=mode,
             tokenizer=tokenizer,
             is_encoder_decoder=is_encoder_decoder,
-            tuning_method=tuning_method,
             data_name=data_name,
             input_format=input_format,
             output_format=output_format,
